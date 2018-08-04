@@ -490,7 +490,8 @@ function peerJoin() {
 			// Hide videos and display call container
 			remoteView.style.visibility = "hidden";
 			videoContainer.style.display = "none";
-			controlContainer.style.display = "none";
+			controlContainer.style.display = "block";
+			//controlContainer.style.display = "none";
 			callContainer.style.display = "block";
 			logoContainer.style.display = "block";
 			footer.style.display = "block";
