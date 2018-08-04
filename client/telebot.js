@@ -50,7 +50,7 @@ var recorderOptions = {
 var localControlUrl = "http://127.0.0.1:11698/control";
 
 // Global variables
-var active = true;
+var userMode = true;
 var sessionId = '';
 var userId = '';
 
@@ -96,23 +96,26 @@ navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia 
 window.orientation = window.orientation || 0;
 
 // Initialization function
+// Active mode for USER and Passive mode for ROBOT
+// Both active and passive mode will call the peerJoin() to make connection 
 function init()
 {
 	// Session and mode from hash
 	var hash = window.location.hash.substr(1);
+	//passive
 	if(hash && hash[0] == '_') {
 		// Leading '_' enables passive mode
 		if(!sessionStorage.mode) sessionStorage.mode = 'passive';
 		hash = hash.substr(1);
 		window.location.href = window.location.href.split("#")[0] + '#' + hash;
 	}
-
+	// active
 	if(!sessionStorage.mode) sessionStorage.mode = 'active';
-	active = (sessionStorage.mode != 'passive');
+	userMode = (sessionStorage.mode != 'passive');
 	sessionId = hash;
-	if(!userId) userId = (active ? '' : '_') + Math.random().toString(16).substr(2);
+	if(!userId) userId = (userMode ? '' : '_') + Math.random().toString(16).substr(2);
 
-	if(!active) {
+	if(!userMode) {
 		// If not active, switch to dark background
 		document.body.style.background = "#000000";
 		document.body.style.color = "#FFFFFF";
@@ -144,7 +147,7 @@ function init()
 	// If no session is specified, hide call container
 	if(!sessionId) callContainer.style.display = "none";
 
-	if(active)
+	if(userMode)
 	{
 		// If no session is specified, show session selector
 		if(!sessionId) {
@@ -206,7 +209,7 @@ window.onload = function() {
 	}
 
 	// By default, call button ask for media
-	if(active) {
+	if(userMode) {
 		callButton.onclick = function() {
 			displayMessage("Access to media device not allowed");
 		};
@@ -225,7 +228,7 @@ window.onload = function() {
 				selfView.play();
 			};
 
-			if(active) {
+			if(userMode) {
 				// If active, call button triggers peerJoin()
 				callButton.onclick = function() {
 					callButton.disabled = true;
@@ -245,7 +248,7 @@ window.onload = function() {
 			clearTimeout(displayMessageTimeout);
 		});
 
-	if(active) {
+	if(userMode) {
 		// Request notification permission
 		if(Notification && Notification.permission != 'granted')
 		{
@@ -438,7 +441,7 @@ function handleKeyUp(evt) {
 // Try to join peer
 function peerJoin() {
 	// This can be long, display proper message
-	if(active) displayMessage("Calling...");
+	if(userMode) displayMessage("Calling...");
 	else displayMessage("Ready\n\n"+sessionId);
 
 	// Create signaling channel
@@ -446,7 +449,7 @@ function peerJoin() {
 
 	// Set unavailability timeout if active
 	var timeout = null;
-	if(active) {
+	if(userMode) {
 		timeout = setTimeout(function() {
 			requestStatus();
 			displayMessage("Unavailable");
@@ -458,21 +461,21 @@ function peerJoin() {
 
 	// Handle busy session
 	signaling.onbusy = function(evt) {
-		if(active) requestStatus();
+		if(userMode) requestStatus();
 		displayMessage("Busy, retry later");
 		signaling.close();
 		signaling = null;
-		if(active) callButton.disabled = false;
+		if(userMode) callButton.disabled = false;
 	};
 
 	// Handle incoming peer
 	signaling.onpeer = function(evt) {
-		if(active && evt.userid[0] != '_') return;
+		if(userMode && evt.userid[0] != '_') return;
 
 		if(timeout) clearTimeout(timeout);
 		peer = evt.peer;
 
-		// Handle signaling messages from peer
+		// Handle signaling messages from peer - Exchange DATA ???
 		peer.onmessage = handleMessage;
 
 		// Handle peer disconnection
@@ -492,7 +495,7 @@ function peerJoin() {
 			logoContainer.style.display = "block";
 			footer.style.display = "block";
 
-			if(active)
+			if(userMode)
 			{
 				displayMessage("Disconnected");
 				callButton.disabled = false;
@@ -508,7 +511,7 @@ function peerJoin() {
 		};*/
 
 		// If active, schedule session initiation now
-		if(active) {
+		if(userMode) {
 			setTimeout(function() {
 				start(true);
 			}, 500);
@@ -557,7 +560,7 @@ function handleMessage(evt) {
 		}
 	}
 
-	if(message.control && !active) {
+	if(message.control && !userMode) {
 		var left = Math.floor(message.control.left);
 		var right = Math.floor(message.control.right);
 		localControl(left, right);
@@ -599,7 +602,7 @@ function start(isInitiator) {
 			remoteView.play();
 		};
 
-		if(active) {
+		if(userMode) {
 			// Display controls
 			controlContainer.style.display = "block";
 
@@ -613,7 +616,7 @@ function start(isInitiator) {
 	// Add local stream
 	peerConnection.addStream(localStream);
 
-	if(active) {
+	if(userMode) {
 		// Create control data channel
 		var controlChannelOptions = {
 			ordered: true
@@ -775,7 +778,7 @@ function record(stream) {
 function displayMessage(msg) {
 	var element = document.getElementById("message");
 	if(displayMessageTimeout) clearTimeout(displayMessageTimeout);
-	if(active) {
+	if(userMode) {
 		displayMessageTimeout = setTimeout(function() {
 			element.textContent = "";
 		}, 10000);
